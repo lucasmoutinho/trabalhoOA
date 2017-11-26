@@ -17,8 +17,6 @@ using namespace std;
 #define TRUE 1
 #define FALSE 0
 
-int numb_files = -1;
-int total_time = 0;
 
 typedef struct block{
      unsigned char bytes_s[512];
@@ -43,6 +41,10 @@ typedef struct fatent_s {
     unsigned int eof;
     unsigned int next;
 } fatent;
+
+
+int numb_files = -1;
+int tempo_gravacao = 0;
 fatent *fat_ent;
 FILE *fp;
 
@@ -106,14 +108,14 @@ int searchFatList(int cyl_trk_sec[]){
 	*/
 	int i, j, k;
 	i = j = k = 0;
-	total_time = SEEK_T_MEDIO;
+	tempo_gravacao = SEEK_T_MEDIO;
 
 	while(fat_ent[i].used == TRUE){
 		i++;
 		if(i % 60 == 0){
 			j++;
 			i = j*300;
-			total_time += T_MEDIO_LAT;
+			tempo_gravacao += T_MEDIO_LAT;
 		}
 		if(i % 3000 == 0){
 			k++;
@@ -156,9 +158,11 @@ track_array *allocCylinder(){
 
 
 // Funcao utilizada para verificar se o arquivo a ser aberto existe ou nao.
-void verificaArquivo(char nome_arquivo[]){
+int verificaArquivo(char nome_arquivo[]){
 
   int arquivo_encontrado = 0;
+	string confirmar;
+	int res;
 
   cout << endl << "Informe o nome do arquivo" << endl;
   cin >> nome_arquivo;
@@ -170,10 +174,26 @@ void verificaArquivo(char nome_arquivo[]){
       arquivo_encontrado = 0;
     }else{
       CLEAR
-      cout << endl << "Arquivo encontrado" << endl;
-      arquivo_encontrado = 1;
+      cout << endl << "O arquivo pode ser escrito" << endl;
+			cout << endl << "Deseja confirmar esta operacao? (s/n): ";
+			cin >> confirmar;
+			while((confirmar != "n") && (confirmar != "s")) {
+				cout << "Opcao invalida, tente novamente: ";
+				cin >> confirmar;
+			}
+			if (confirmar == "s") {
+				CLEAR
+				arquivo_encontrado = 1;
+				res = 1;
+			}else if (confirmar == "n") {
+				CLEAR
+				arquivo_encontrado = 1;
+				res = 0;
+				cout << "Retornando ao menu..." << endl << endl;
+			}
     }
   }
+	return res;
 }
 
 void escreverArquivo(char file_name[], track_array *cylinder){
@@ -189,24 +209,19 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	fp = fopen(file_name, "r+");
 	fp_size = sizeOfFile();
 
-	printf(" - Nome do arquivo:" " %s\n" , file_name);
-	printf(" - Tamanho do Arquivo digitado:" " %.0f bytes\n", fp_size);
-
 	cluster_needed = ceil(fp_size / (CLUSTER * 512));
+	cout << "Tamanho do arquivo a ser gravado: " << fp_size << " bytes" << endl;
+
 	printf(" - O arquivo necessitará de" " %.0lf cluster(s)\n", cluster_needed);
 
 	fclose(fp);
-	getchar();
-	getchar();
-	getchar();
-	getchar();
 	pos_inicial = searchFatList(cyl_trk_sec);
 	allocFatList(file_name, pos_inicial);
 	oneToThree(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
 
-	total_time = 0;
+	tempo_gravacao = 0;
 
 	cyl = cyl_trk_sec[0];
 	while(written_sector < (cluster_needed*4)){
@@ -232,7 +247,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			de baixo e se reduz 4 para voltar ao inicio do cluster para
 			assim somar 1.
 			*/
-			total_time += T_MEDIO_LAT;
+			tempo_gravacao += T_MEDIO_LAT;
 			j = 0;
 			cyl_trk_sec[2] += 57;
 			while(fat_ent[cyl_trk_sec[2]].used != FALSE){
@@ -253,7 +268,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 		}
 
 		if(cyl_trk_sec[0] != cyl){
-			total_time += T_MEDIO_LAT;
+			tempo_gravacao += T_MEDIO_LAT;
 		}
 
 		next_sector = pos_inicial;
@@ -287,6 +302,8 @@ int main(){
     int opcao = 0;
     char nome_arquivo[100];
 		track_array *cylinder = allocCylinder();
+		fat_ent = (fatent*)malloc(30000*sizeof(fatent));
+		int res;
     CLEAR
     do{
         opcao = menu();
@@ -294,8 +311,14 @@ int main(){
         switch(opcao){
             case 1:
                 CLEAR
-                verificaArquivo(nome_arquivo);
-								escreverArquivo(nome_arquivo, cylinder);
+                res = verificaArquivo(nome_arquivo);
+								if (res == 1) {
+									numb_files++;
+									escreverArquivo(nome_arquivo, cylinder);
+									cout << "Gravado com sucesso no HD!" << endl << endl;
+									cout << "Tempo total utlizado na gravacao: " << tempo_gravacao << "m(s)" << endl;
+									tempo_gravacao = 0;
+								}
                 break;
             case 2:
 
