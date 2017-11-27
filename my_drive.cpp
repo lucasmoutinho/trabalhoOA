@@ -49,6 +49,12 @@ int tempo_leitura = 0;
 fatent *fat_ent;
 FILE *fp;
 
+void pressioneEnter(){
+	cout << endl << "Pressione Enter para continuar..." << endl;
+	while (getchar() != '\n');
+	while(getchar() != '\n'); 
+}
+
 void allocFatList(char file_name[], int pos_inicial){
 	/*
 		Re-aloca memoria para a estrutura de FatList de acordo com o necessario
@@ -140,7 +146,6 @@ int sizeOfFile(){
 
 	fseek(fp, 0, SEEK_END); /* Leva o ponteiro para o final do arquivo */
 	size = ftell(fp); /* Retorna a posição do ponteiro dentro do arquivo */
-
 	return size;
 }
 
@@ -268,13 +273,13 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 
 	fp = fopen(file_name, "r+");
 	tamanho_do_arquivo = sizeOfFile();
-
 	clusters_necessarios = ceil(tamanho_do_arquivo / (CLUSTER * 512));
-	cout << "Tamanho do arquivo a ser gravado: " << tamanho_do_arquivo << " bytes" << endl;
-
-	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
-
 	fclose(fp);
+
+	cout << "Tamanho do arquivo a ser gravado: " << tamanho_do_arquivo << " bytes" << endl;
+	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
+	pressioneEnter();
+
 	pos_inicial = searchFatList(cyl_trk_sec);
 	allocFatList(file_name, pos_inicial);
 	oneToThree(pos_inicial, cyl_trk_sec);
