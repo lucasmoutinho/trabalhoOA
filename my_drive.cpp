@@ -109,40 +109,39 @@ void oneToThree(int index, int cyl_trk_sec[]){
 }
 
 
-int searchFatList(int cyl_trk_sec[]){
+int procuraNaFatEnt(){
 	/*
 		Procura o valor de setor bruto usado para gravar o arquivo
 	*/
-	int i, j, k;
-	i = j = k = 0;
+	int pos_inicial = 0, i = 0, j = 0;
 	tempo_gravacao = SEEK_T_MEDIO;
 
-	while(fat_ent[i].used == TRUE){
-		i++;
-		if(i % 60 == 0){
-			j++;
-			i = j*300;
+	while(fat_ent[pos_inicial].used == TRUE){
+		pos_inicial+=4;
+		if(pos_inicial % 60 == 0){
+			i++;
+			pos_inicial = i*300 + j*60;
 			tempo_gravacao += T_MEDIO_LAT;
 		}
-		if(i % 3000 == 0){
-			k++;
-			i = k*60;
+		if(pos_inicial % 3000 == 0){
+			j++;
+			i = 0;
+			pos_inicial = j*60;
 		}
 	}
 
- 	return i;
-
+ 	return pos_inicial;
 }
 
 
-int sizeOfFile(){
+long int tamanhoDoArquivo(){
 	/*
 	Retorna o tamanho do arquivo em bytes
 	Observação: o 'size' sempre
 	tera alguns bytes a mais devido ao
 	'\n' ao final do arquivo e das linhas.
 	*/
-	int size;
+	long int size;
 
 	fseek(fp, 0, SEEK_END); /* Leva o ponteiro para o final do arquivo */
 	size = ftell(fp); /* Retorna a posição do ponteiro dentro do arquivo */
@@ -229,7 +228,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	if(i <= numb_files){
 		strcpy(file_name_2, fat_list[i].file_name);
 		fp = fopen(file_name_2, "r+");
-		tamanho_do_arquivo = sizeOfFile();
+		tamanho_do_arquivo = tamanhoDoArquivo();
 	}
 
 	/* Se o arquivo existe no Hd Salva no saida.txt */
@@ -272,7 +271,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	int pos_inicial, i, written_sector = 0, j, next_sector, actual_sector;
 
 	fp = fopen(file_name, "r+");
-	tamanho_do_arquivo = sizeOfFile();
+	tamanho_do_arquivo = tamanhoDoArquivo();
 	clusters_necessarios = ceil(tamanho_do_arquivo / (CLUSTER * 512));
 	fclose(fp);
 
@@ -280,7 +279,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
 	pressioneEnter();
 
-	pos_inicial = searchFatList(cyl_trk_sec);
+	pos_inicial = procuraNaFatEnt();
 	allocFatList(file_name, pos_inicial);
 	oneToThree(pos_inicial, cyl_trk_sec);
 
@@ -367,7 +366,7 @@ int main(){
 	int opcao = 0;
 	char nome_arquivo[100];
 	track_array *cylinder = allocCylinder();
-	fat_ent = (fatent*)malloc(30000*sizeof(fatent));
+	fat_ent = (fatent*)malloc(3000*sizeof(fatent));
 	int res;
 	CLEAR
 	do{
