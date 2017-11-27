@@ -55,7 +55,7 @@ void pressioneEnter(){
 	while(getchar() != '\n'); 
 }
 
-void allocFatList(char file_name[], int pos_inicial){
+void alocarAFatList(char file_name[], int pos_inicial){
 	/*
 		Re-aloca memoria para a estrutura de FatList de acordo com o necessario
 		Param:
@@ -268,7 +268,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	double tamanho_do_arquivo;
 	int cyl_trk_sec[] = {0, 0, 0};
 	int cyl;
-	int pos_inicial, i, written_sector = 0, j, next_sector, actual_sector;
+	int pos_inicial, i, setores_escritos = 0, j, proximo_setor, setor_atual, trilha_inicial;
 
 	fp = fopen(file_name, "r+");
 	tamanho_do_arquivo = tamanhoDoArquivo();
@@ -280,7 +280,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	pressioneEnter();
 
 	pos_inicial = procuraNaFatEnt();
-	allocFatList(file_name, pos_inicial);
+	alocarAFatList(file_name, pos_inicial);
 	oneToThree(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
@@ -288,57 +288,57 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	tempo_gravacao = 0;
 
 	cyl = cyl_trk_sec[0];
-	while(written_sector < (clusters_necessarios*4)){
-		/* Conta até o written_sector chegar ao número de setores necessários
+	trilha_inicial = cyl_trk_sec[1];
+	setor_atual = pos_inicial;
+	while(setores_escritos < (clusters_necessarios*4)){
+		/* Conta até o setores_escritos chegar ao número de setores necessários
 		multiplo de 4 */
 
-		actual_sector = pos_inicial;
 		/* Guarda o setor atual pois pos_incial se altera
 		no decorrer do algoritmo*/
 
 		for(i = 0; i < 512; i++){
 			/* Loop para leitura do arquivo */
-			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]]
-			.sector[cyl_trk_sec[2]].bytes_s[i]);
+			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[i]);
 		}
-		written_sector++;
+		setores_escritos++;
 		/* soma 1 nos setores ja escritos(tanto faz o local) */
 
-		if(written_sector % 4 == 0){
+		if(setores_escritos % 4 == 0){
 			/*
 			Aqui eh checado se o algoritmo escreveu 1 cluster, se sim ele
 			soma 57.(57 = 60 - 4 + 1) Em que somar 60 pula para o cluster
 			de baixo e se reduz 4 para voltar ao inicio do cluster para
 			assim somar 1.
 			*/
-			tempo_gravacao += T_MEDIO_LAT;
-			j = 0;
-			cyl_trk_sec[2] += 57;
-			while(fat_ent[cyl_trk_sec[2]].used != FALSE){
-				/* Checa se o cluster logo abaixo esta vago */
-				j++;
-				cyl_trk_sec[2]++;
-				if(j == 4){
-					/* Caso todo o cluster abaixo esteja ocupado,
-					ele pula para o de baixo */
-					cyl_trk_sec[2] += 57;
-				}
+			if(cyl_trk_sec[1] < 4){
+				cyl_trk_sec[2] += 57;
+				proximo_setor = cyl_trk_sec[2];	
 			}
-			pos_inicial = cyl_trk_sec[2];
+			else if((pos_inicial+4) % 60 == 0 ){
+				cyl_trk_sec[0]++;
+				cyl_trk_sec[1] = trilha_inicial;
+				cyl_trk_sec[2] = 
+			}
+			else{
+				cyl_trk_sec[1]++;
+				cyl_trk_sec[2] += 57;
+			}
 		} else {
 			/* Caso nao tenha escrito um cluster pos_inicial++ normalmente */
-			pos_inicial++;
-			cyl_trk_sec[2] = pos_inicial;
+			proximo_setor = setor_atual + 1;
+			cyl_trk_sec[2] = proximo_setor;
 		}
 
 		if(cyl_trk_sec[0] != cyl){
+			cyl = cyl_trk_sec[0];
 			tempo_gravacao += T_MEDIO_LAT;
 		}
 
-		next_sector = pos_inicial;
-		allocFatEnt(TRUE, FALSE, next_sector, actual_sector);
+		allocFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
+		setor_atual = proximo_setor;
 	}
-	fat_ent[actual_sector].eof = TRUE;
+	fat_ent[setor_atual].eof = TRUE;
 	/* Esta linha atribui eof no ultimo setor escrito.
 	Melhor aqui do que com um if dentro do loop. */
 }
