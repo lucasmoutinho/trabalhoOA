@@ -371,36 +371,36 @@ int main(){
 		tempo_leitura = 0;
 		switch(opcao){
 			case 1:
-			CLEAR
-			res = verificaArquivo(nome_arquivo);
-			if (res == 1) {
-				numb_files++;
-				escreverArquivo(nome_arquivo, cylinder);
-				cout << "Gravado com sucesso no HD!" << endl << endl;
-				cout << "Tempo total utlizado na gravacao: " << tempo_gravacao << "m(s)" << endl;
+				CLEAR
+				res = verificaArquivo(nome_arquivo);
+				if (res == 1) {
+					numb_files++;
+					escreverArquivo(nome_arquivo, cylinder);
+					cout << "Gravado com sucesso no HD!" << endl << endl;
+					cout << "Tempo total utlizado na gravacao: " << tempo_gravacao << "m(s)" << endl;
 
-			}
-			break;
+				}
+				break;
 			case 2:
-			CLEAR
-			cout << "Leitura de arquivo do HD virtual" << endl;
-			cout << "Irá gerar um arquivo SAIDA.txt" << endl;
-			res = verificaArquivo(nome_arquivo);
-			leituraArquivo(nome_arquivo, cylinder);
-			cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
-			break;
+				CLEAR
+				cout << "Leitura de arquivo do HD virtual" << endl;
+				cout << "Irá gerar um arquivo SAIDA.txt" << endl;
+				res = verificaArquivo(nome_arquivo);
+				leituraArquivo(nome_arquivo, cylinder);
+				cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
+				break;
 			case 3:
 
-			break;
+				break;
 			case 4:
 
-			break;
+				break;
 			case 5:
-			cout << "Saindo" << endl << endl;
-			break;
+				cout << "Saindo" << endl << endl;
+				break;
 			default:
-			cout << "Valor invalido" << endl << endl;
-			break;
+				cout << "Valor invalido" << endl << endl;
+				break;
 		}
 
 
