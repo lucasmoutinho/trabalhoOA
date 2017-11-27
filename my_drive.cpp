@@ -384,7 +384,7 @@ int main(){
 			case 2:
 				CLEAR
 				cout << "Leitura de arquivo do HD virtual" << endl;
-				cout << "Irá gerar um arquivo SAIDA.txt" << endl;
+				cout << "Irá gerar um arquivo saida.txt" << endl;
 				res = verificaArquivo(nome_arquivo);
 				leituraArquivo(nome_arquivo, cylinder);
 				cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
