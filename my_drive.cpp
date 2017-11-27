@@ -45,6 +45,7 @@ typedef struct fatent_s {
 
 int numb_files = -1;
 int tempo_gravacao = 0;
+int tempo_leitura = 0;
 fatent *fat_ent;
 FILE *fp;
 
@@ -174,7 +175,7 @@ int verificaArquivo(char nome_arquivo[]){
       arquivo_encontrado = 0;
     }else{
       CLEAR
-      cout << endl << "O arquivo pode ser escrito" << endl;
+      cout << endl << "O arquivo pode ser escrito/lido" << endl;
 			cout << endl << "Deseja confirmar esta operacao? (s/n): ";
 			cin >> confirmar;
 			while((confirmar != "n") && (confirmar != "s")) {
@@ -196,23 +197,82 @@ int verificaArquivo(char nome_arquivo[]){
 	return res;
 }
 
+void leituraArquivo(char file_name[], track_array *cylinder) {
+	/*
+		Funcao para Leitura do arquivo
+	*/
+	int i = 0, setor, j = 0, numb_sectors = 1, read_sector = 0, tamanho_do_arquivo, l = 0;
+	int t;
+	char file_name_2[100];
+	int cyl_trk_sec[] = {0, 0, 0};
+
+	tempo_leitura = SEEK_T_MEDIO;
+
+	/* Enquanto nao acha o nome no arquvio na tabela fat ...*/
+	while(strcmp(fat_list[i].file_name, file_name) != 0 && (i <= numb_files)){
+		i++;
+	}
+	setor = fat_list[i].first_sector;
+
+	/* Conta a quantidade de setores*/
+	while(fat_ent[setor].eof == FALSE){
+		numb_sectors++;
+		setor = fat_ent[setor].next;
+	}
+
+
+	if(i <= numb_files){
+		strcpy(file_name_2, fat_list[i].file_name);
+		fp = fopen(file_name_2, "r+");
+		tamanho_do_arquivo = sizeOfFile();
+	}
+
+	/* Se o arquivo existe no Hd Salva no saida.txt */
+	if(strcmp(fat_list[i].file_name, file_name) != 0){
+		cout << "O arquivo nao esta presente o HD virtual" << endl;
+	} else {
+		fp = fopen("saida.txt", "w+");
+		setor = fat_list[i].first_sector;
+		t = setor;
+
+		while(l < tamanho_do_arquivo){
+			if(t+4 < setor){
+				tempo_leitura += T_MEDIO_LAT;
+				t = setor;
+			}
+			oneToThree(setor, cyl_trk_sec);
+			while(j < 512 && l < tamanho_do_arquivo){
+				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]]
+						.track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
+				j++;
+				l++;
+			}
+
+			j = 0;
+			setor = fat_ent[setor].next;
+			read_sector++;
+		}
+		fclose(fp);
+	}
+}
+
 void escreverArquivo(char file_name[], track_array *cylinder){
 	/*
-		Funcao para escrita do arquivo no HD
+	Funcao para escrita do arquivo no HD
 	*/
-	double cluster_needed;
-	double fp_size;
+	double clusters_necessarios;
+	double tamanho_do_arquivo;
 	int cyl_trk_sec[] = {0, 0, 0};
 	int cyl;
 	int pos_inicial, i, written_sector = 0, j, next_sector, actual_sector;
 
 	fp = fopen(file_name, "r+");
-	fp_size = sizeOfFile();
+	tamanho_do_arquivo = sizeOfFile();
 
-	cluster_needed = ceil(fp_size / (CLUSTER * 512));
-	cout << "Tamanho do arquivo a ser gravado: " << fp_size << " bytes" << endl;
+	clusters_necessarios = ceil(tamanho_do_arquivo / (CLUSTER * 512));
+	cout << "Tamanho do arquivo a ser gravado: " << tamanho_do_arquivo << " bytes" << endl;
 
-	printf(" - O arquivo necessitará de" " %.0lf cluster(s)\n", cluster_needed);
+	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
 
 	fclose(fp);
 	pos_inicial = searchFatList(cyl_trk_sec);
@@ -224,18 +284,18 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	tempo_gravacao = 0;
 
 	cyl = cyl_trk_sec[0];
-	while(written_sector < (cluster_needed*4)){
+	while(written_sector < (clusters_necessarios*4)){
 		/* Conta até o written_sector chegar ao número de setores necessários
-		   multiplo de 4 */
+		multiplo de 4 */
 
 		actual_sector = pos_inicial;
 		/* Guarda o setor atual pois pos_incial se altera
-		   no decorrer do algoritmo*/
+		no decorrer do algoritmo*/
 
 		for(i = 0; i < 512; i++){
-		/* Loop para leitura do arquivo */
+			/* Loop para leitura do arquivo */
 			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]]
-				.sector[cyl_trk_sec[2]].bytes_s[i]);
+			.sector[cyl_trk_sec[2]].bytes_s[i]);
 		}
 		written_sector++;
 		/* soma 1 nos setores ja escritos(tanto faz o local) */
@@ -255,8 +315,8 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 				j++;
 				cyl_trk_sec[2]++;
 				if(j == 4){
-				/* Caso todo o cluster abaixo esteja ocupado,
-				   ele pula para o de baixo */
+					/* Caso todo o cluster abaixo esteja ocupado,
+					ele pula para o de baixo */
 					cyl_trk_sec[2] += 57;
 				}
 			}
@@ -276,69 +336,75 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	}
 	fat_ent[actual_sector].eof = TRUE;
 	/* Esta linha atribui eof no ultimo setor escrito.
-	   Melhor aqui do que com um if dentro do loop. */
+	Melhor aqui do que com um if dentro do loop. */
 }
 
 int menu(){
-    int opcao;
+	int opcao;
 
-    cout << endl;
-    cout << "----------------------------------" << endl;
-    cout << "1 - Escrever arquivo" << endl;
-    cout << "2 - Ler arquivo" << endl;
-    cout << "3 - Apagar arquivo" << endl;
-    cout << "4 - Mostrar tabela FAT" << endl;
-    cout << "5 - Sair" << endl;
-    cout << "----------------------------------" << endl;
-    cout << "Digite a sua opcao entre as acima: ";
+	cout << endl;
+	cout << "----------------------------------" << endl;
+	cout << "1 - Escrever arquivo" << endl;
+	cout << "2 - Ler arquivo" << endl;
+	cout << "3 - Apagar arquivo" << endl;
+	cout << "4 - Mostrar tabela FAT" << endl;
+	cout << "5 - Sair" << endl;
+	cout << "----------------------------------" << endl;
+	cout << "Digite a sua opcao entre as acima: ";
 
-    cin >> opcao;
-    cout << endl << endl;
-    return opcao;
+	cin >> opcao;
+	cout << endl << endl;
+	return opcao;
 }
 
 int main(){
 
-    int opcao = 0;
-    char nome_arquivo[100];
-		track_array *cylinder = allocCylinder();
-		fat_ent = (fatent*)malloc(30000*sizeof(fatent));
-		int res;
-    CLEAR
-    do{
-        opcao = menu();
+	int opcao = 0;
+	char nome_arquivo[100];
+	track_array *cylinder = allocCylinder();
+	fat_ent = (fatent*)malloc(30000*sizeof(fatent));
+	int res;
+	CLEAR
+	do{
+		opcao = menu();
+		tempo_gravacao = 0;
+		tempo_leitura = 0;
+		switch(opcao){
+			case 1:
+			CLEAR
+			res = verificaArquivo(nome_arquivo);
+			if (res == 1) {
+				numb_files++;
+				escreverArquivo(nome_arquivo, cylinder);
+				cout << "Gravado com sucesso no HD!" << endl << endl;
+				cout << "Tempo total utlizado na gravacao: " << tempo_gravacao << "m(s)" << endl;
 
-        switch(opcao){
-            case 1:
-                CLEAR
-                res = verificaArquivo(nome_arquivo);
-								if (res == 1) {
-									numb_files++;
-									escreverArquivo(nome_arquivo, cylinder);
-									cout << "Gravado com sucesso no HD!" << endl << endl;
-									cout << "Tempo total utlizado na gravacao: " << tempo_gravacao << "m(s)" << endl;
-									tempo_gravacao = 0;
-								}
-                break;
-            case 2:
+			}
+			break;
+			case 2:
+			CLEAR
+			cout << "Leitura de arquivo do HD virtual" << endl;
+			cout << "Irá gerar um arquivo SAIDA.txt" << endl;
+			res = verificaArquivo(nome_arquivo);
+			leituraArquivo(nome_arquivo, cylinder);
+			cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
+			break;
+			case 3:
 
-                break;
-            case 3:
+			break;
+			case 4:
 
-                break;
-            case 4:
-
-                break;
-            case 5:
-                cout << "Saindo" << endl << endl;
-                break;
-            default:
-                cout << "Valor invalido" << endl << endl;
-                break;
-        }
+			break;
+			case 5:
+			cout << "Saindo" << endl << endl;
+			break;
+			default:
+			cout << "Valor invalido" << endl << endl;
+			break;
+		}
 
 
-    } while(opcao != 5);
+	} while(opcao != 5);
 
-    return 0;
+	return 0;
 }
