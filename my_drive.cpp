@@ -89,7 +89,7 @@ void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 
 int setorBruto(){
 	int pos_inicial = 0, i = 0, j = 0;
-	tempo_gravacao = SEEK_T_MEDIO;
+	tempo_gravacao += SEEK_T_MEDIO;
 
 	while(fat_ent[pos_inicial].used == TRUE){
 		pos_inicial+=4;
@@ -270,7 +270,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	int cyl_trk_sec[] = {0, 0, 0};
 	double tamanho_do_arquivo;
 
-	tempo_leitura = SEEK_T_MEDIO;
+	tempo_leitura += SEEK_T_MEDIO;
 
 	while(strcmp(fat_list[i].file_name, file_name) != 0){
 		i++;
@@ -319,7 +319,6 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
-	tempo_gravacao = 0;
 	cyl = cyl_trk_sec[0];
 	trilha_inicial = cyl_trk_sec[1];
 	setor_atual = pos_inicial;
