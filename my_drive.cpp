@@ -149,7 +149,7 @@ void mostrarTabelaGorda(){
 }
 
 int verificaArquivo(char nome_arquivo[], int opcao_menu){
-  int arquivo_encontrado = 0, i = 0, numb_files = 0;
+  int arquivo_encontrado = 0, i = 0;
 	string confirmar;
 	int res = 0;
 
@@ -349,6 +349,14 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 				cyl_trk_sec[2]++;
 				proximo_setor = setor_atual - 239;
 				pos_inicial += 4;
+			}
+
+			if(fat_ent[proximo_setor].used == TRUE){
+				proximo_setor = setorBruto();
+				vetorPosicao(proximo_setor, cyl_trk_sec);
+				pos_inicial = proximo_setor;
+				cyl = cyl_trk_sec[0];
+				trilha_inicial = cyl_trk_sec[1];
 			}
 		} 
 		else {
