@@ -35,6 +35,7 @@ typedef struct track_array{
 typedef struct fatlist_s {
     char file_name[100];
     unsigned int first_sector;
+		double tamanho_arquivo;
 } fatlist;
 fatlist *fat_list = NULL;
 
@@ -57,7 +58,27 @@ void pressioneEnter(){
 	while(getchar() != '\n'); 
 }
 
-void alocarAFatList(char file_name[], int pos_inicial){
+void mostrarTabelaGorda(){
+	int i = 0, setor;
+	cout << "-------------------------------" << endl;
+	while (i <= numb_files){
+		cout << " --- Nome do arquivo: " << fat_list[i].file_name << "\t";
+		cout << " --- Tamanho em disco: " << fat_list[i].tamanho_arquivo << "\t";
+		setor = fat_list[i].first_sector; 
+		cout << "--- Local da memoria: ";
+		while (fat_ent[setor].eof != TRUE){
+			cout << setor << " ";
+			setor = fat_ent[setor].next;
+		}
+		cout << endl << endl;
+		i++;
+	}
+	cout << "-------------------------------" << endl;
+	cout << "quantidade de arquivos: " << i << endl;
+	pressioneEnter();
+}
+
+void alocarAFatList(char file_name[], int pos_inicial, int tamanho_arquivo){
 	/*
 		Re-aloca memoria para a estrutura de FatList de acordo com o necessario
 		Param:
@@ -68,6 +89,7 @@ void alocarAFatList(char file_name[], int pos_inicial){
 
 	strcpy(fat_list[numb_files].file_name, file_name);
 	fat_list[numb_files].first_sector = pos_inicial;
+	fat_list[numb_files].tamanho_arquivo = tamanho_arquivo;
 }
 
 void populaFatEnt(int used ,int eof ,int next, int sector){
@@ -217,9 +239,9 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	/*
 		Funcao para Leitura do arquivo
 	*/
-	int i = 0, setor, j = 0, tamanho_do_arquivo, bytes_lidos = 0, t;
-	char nome_arquivo[100];
+	int i = 0, setor, j = 0, bytes_lidos = 0, t;
 	int cyl_trk_sec[] = {0, 0, 0};
+	double tamanho_do_arquivo;
 
 	tempo_leitura = SEEK_T_MEDIO;
 
@@ -229,10 +251,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	}
 	setor = fat_list[i].first_sector;
 
-	strcpy(nome_arquivo, fat_list[i].file_name);
-	fp = fopen(nome_arquivo, "r+");
-	tamanho_do_arquivo = tamanhoDoArquivo();
-	fclose(fp);
+	tamanho_do_arquivo = fat_list[i].tamanho_arquivo;
 
 	fp = fopen("saida.txt", "w+");
 	t = setor;
@@ -273,7 +292,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	pressioneEnter();
 
 	pos_inicial = setorBruto();
-	alocarAFatList(file_name, pos_inicial);
+	alocarAFatList(file_name, pos_inicial, tamanho_do_arquivo);
 	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
@@ -401,7 +420,8 @@ int main(){
 
 				break;
 			case 4:
-
+				CLEAR
+				mostrarTabelaGorda();
 				break;
 			case 5:
 				cout << "Saindo" << endl << endl;
