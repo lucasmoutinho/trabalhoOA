@@ -53,36 +53,9 @@ int tempo_leitura = 0;
 fatent *fat_ent;
 FILE *fp;
 
-void pressioneEnter(){
-	cout << endl << "Pressione Enter para continuar..." << endl;
-	while(getchar() != '\n');
-	while(getchar() != '\n'); 
-}
-
-void mostrarTabelaGorda(){
-	int i = 0, setor, j = 0;
-	cout << "-------------------------------" << endl;
-	while (i <= numb_files){
-		if (strcmp(fat_list[i].file_name, "erased") != 0)
-		{
-			cout << " --- Nome do arquivo: " << fat_list[i].file_name << "\t";
-			cout << " --- Tamanho em disco: " << fat_list[i].tamanho_arquivo << " Bytes" << "\t";
-			setor = fat_list[i].first_sector; 
-			cout << "--- Localizacao: ";
-			while (fat_ent[setor].eof != TRUE){
-				cout << setor << " ";
-				setor = fat_ent[setor].next;
-			}
-			cout << endl << endl;
-		}
-		else{
-			j++;
-		}
-		i++;
-	}
-	cout << "-------------------------------" << endl;
-	cout << "quantidade de arquivos: " << i - j << endl;
-	pressioneEnter();
+track_array *alocaCilindro(){
+	track_array *array_cilindro = (track_array *)malloc(sizeof(track_array) * 10);
+	return array_cilindro;
 }
 
 void alocarAFatList(char file_name[], int pos_inicial, int tamanho_arquivo){
@@ -144,10 +117,35 @@ long int tamanhoDoArquivo(){
 	return size;
 }
 
+void pressioneEnter(){
+	cout << endl<< "Pressione Enter para continuar..." << endl;
+	while (getchar() != '\n');
+	while (getchar() != '\n');
+}
 
-track_array *alocaCilindro(){
-	track_array *array_cilindro = (track_array*)malloc(sizeof(track_array)*10);
-	return array_cilindro;
+void mostrarTabelaGorda(){
+	int i = 0, setor, j = 0;
+	cout << "-------------------------------" << endl;
+	while (i <= numb_files){
+		if (strcmp(fat_list[i].file_name, "erased") != 0){
+			cout << " --- Nome do arquivo: " << fat_list[i].file_name << "\t";
+			cout << " --- Tamanho em disco: " << fat_list[i].tamanho_arquivo << " Bytes"<< "\t";
+			setor = fat_list[i].first_sector;
+			cout << "--- Localizacao: ";
+			while (fat_ent[setor].eof != TRUE){
+				cout << setor << " ";
+				setor = fat_ent[setor].next;
+			}
+			cout << endl<< endl;
+		}
+		else{
+			j++;
+		}
+		i++;
+	}
+	cout << "-------------------------------" << endl;
+	cout << "quantidade de arquivos: " << i - j << endl;
+	pressioneEnter();
 }
 
 int verificaArquivo(char nome_arquivo[], int opcao_menu){
@@ -191,7 +189,23 @@ int verificaArquivo(char nome_arquivo[], int opcao_menu){
 			i++;
 		}
 		if(i <= numb_files){
-			res = 1;
+			CLEAR
+			cout << endl<< "O arquivo pode ser lido do HD virtual" << endl;
+			cout << endl<< "Deseja confirmar esta operacao? (s/n): ";
+			cin >> confirmar;
+			while ((confirmar != "n") && (confirmar != "s")){
+				cout << "Opcao invalida, tente novamente: ";
+				cin >> confirmar;
+			}
+			if (confirmar == "s"){
+				CLEAR
+				res = 1;
+			}
+			else if (confirmar == "n"){
+				CLEAR
+				res = 0;
+				cout << "Retornando ao menu..." << endl<< endl;
+			}
 		}
 		else{
 			res = 0;
