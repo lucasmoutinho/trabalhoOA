@@ -52,11 +52,13 @@ fatent *fat_ent;				// criacao da referencia para a tabela FAT_ENT
 FILE *fp;								// utilizado na entrada e saida de dados no programa
 
 
+//Aloca espaco, dinamicamente, para um cilindro do disco
 track_array *alocaCilindro(){
 	track_array *array_cilindro = (track_array *)malloc(sizeof(track_array) * 10);
 	return array_cilindro;
 }
 
+//Aloca espaco, dinamicamente, para a FAT_LIST
 void alocarAFatList(char file_name[], int pos_inicial, int tamanho_arquivo){
 	fat_list = (fatlist *)realloc(fat_list, (numb_files + 1) * sizeof(fatlist));
 
@@ -65,12 +67,14 @@ void alocarAFatList(char file_name[], int pos_inicial, int tamanho_arquivo){
 	fat_list[numb_files].tamanho_arquivo = tamanho_arquivo;
 }
 
+//Popula a FAT_ENT
 void populaFatEnt(int used, int eof, int next, int sector){
 	fat_ent[sector].used = used;
 	fat_ent[sector].eof = eof;
 	fat_ent[sector].next = next;
 }
 
+//Utiliza do valor de setor bruto para calcular a posicao relativa ao cilindro, trilha e setor
 void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 	int cilindro, trilha, setor;
 
@@ -84,6 +88,7 @@ void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 	cyl_trk_sec[2] = setor;
 }
 
+//Retorna o setor bruto inicial disponivel para iniciar a escrita
 int setorBruto(){
 	int pos_inicial = 0, i = 0, j = 0;
 	tempo_gravacao += SEEK_T_MEDIO;
@@ -105,6 +110,7 @@ int setorBruto(){
 	return pos_inicial;
 }
 
+//Retorna o tamanho do arquivo
 long int tamanhoDoArquivo(){
 	long int size;
 
@@ -113,12 +119,14 @@ long int tamanhoDoArquivo(){
 	return size;
 }
 
+// Pressiona Enter
 void pressioneEnter(){
 	cout << endl<< "Pressione Enter para continuar..." << endl;
 	while (getchar() != '\n');
 	while (getchar() != '\n');
 }
 
+// Mostra a Tabela_Fat para o usuario de acordo com as informacoes da FAT_LIST e FAT_ENT
 void mostrarTabelaGorda(){
 	int i = 0, setor, j = 0;
 	cout << "-------------------------------" << endl;
@@ -145,6 +153,7 @@ void mostrarTabelaGorda(){
 	pressioneEnter();
 }
 
+//Verifica a existencia do arquivo no disco e/ou na pasta e habilita parte da interface com o usuario
 int verificaArquivo(char nome_arquivo[], int opcao_menu){
 	int arquivo_encontrado = 0, i = 0;
 	string confirmar;
@@ -250,6 +259,7 @@ int verificaArquivo(char nome_arquivo[], int opcao_menu){
 	return res;
 }
 
+// Habilita a funcao para apagar o arquivo, reorganizando a FAT_ENT e apagando o nome do arquivo da FAT_LIST
 void apagarArquivo(char file_name[]){
 	int i = 0, setor;
 
@@ -266,6 +276,7 @@ void apagarArquivo(char file_name[]){
 	fat_ent[setor].eof = FALSE;
 }
 
+// Le o arquivo do disco e escreve no arquivo saida.txt
 void leituraArquivo(char file_name[], track_array *cylinder){
 	int i = 0, setor, j = 0, bytes_lidos = 0, t;
 	int cyl_trk_sec[] = {0, 0, 0};
@@ -300,6 +311,7 @@ void leituraArquivo(char file_name[], track_array *cylinder){
 	fclose(fp);
 }
 
+//Le o arquivo no diretorio recorrente e salva os caracteres em setores do disco
 void escreverArquivo(char file_name[], track_array *cylinder){
 	int pos_inicial, i, setores_escritos = 0, proximo_setor, setor_atual, setor_anterior, trilha_inicial, cyl;
 	int cyl_trk_sec[] = {0, 0, 0};
@@ -377,6 +389,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	fclose(fp);
 }
 
+// Menu de opcoes
 int menu(){
 	int opcao;
 
@@ -395,6 +408,7 @@ int menu(){
 	return opcao;
 }
 
+// Funcao principal que chama outras funcoes do programa
 int main(){
 
 	int opcao = 0;
