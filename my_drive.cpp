@@ -55,7 +55,7 @@ void pressioneEnter(){
 	while(getchar() != '\n'); 
 }
 
-void allocFatList(char file_name[], int pos_inicial){
+void alocarAFatList(char file_name[], int pos_inicial){
 	/*
 		Re-aloca memoria para a estrutura de FatList de acordo com o necessario
 		Param:
@@ -68,7 +68,7 @@ void allocFatList(char file_name[], int pos_inicial){
 	fat_list[numb_files].first_sector = pos_inicial;
 }
 
-void allocFatEnt(int used ,int eof ,int next, int sector){
+void alocaFatEnt(int used ,int eof ,int next, int sector){
 	/*
 		Popula a FatEnt.
 		Param:
@@ -82,67 +82,61 @@ void allocFatEnt(int used ,int eof ,int next, int sector){
 	fat_ent[sector].next = next;
 }
 
-void oneToThree(int index, int cyl_trk_sec[]){
+void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 	/*
 		Converte o valor de setor bruto para sua posicao
 		cilindro/trilha/setor
 		Param:
-		-index: int de setor bruto
+		-setor_bruto: int de setor bruto
 		-cyl_trk_sec: array de inteiros para o cilindro/trilha/setor
 	*/
-	int t;
-	int s;
-    int c = index/300;
+	int cilindro, trilha, setor;
 
-    index -= 300*c;
-    if((index/60) >= 5){
-        t = ((index/60)/5)-1;
-    }else{
-        t = (index/60);
-    }
-    s = index%60;
+	cilindro = setor_bruto/300;
+	setor_bruto = setor_bruto%300;
+	trilha = setor_bruto/60;
+	setor = setor_bruto%60;
 
 
-    cyl_trk_sec[0] = c;
-    cyl_trk_sec[1] = t;
-    cyl_trk_sec[2] = s;
+	cyl_trk_sec[0] = cilindro;
+	cyl_trk_sec[1] = trilha;
+	cyl_trk_sec[2] = setor;
 }
 
 
-int searchFatList(int cyl_trk_sec[]){
+int procuraNaFatEnt(){
 	/*
 		Procura o valor de setor bruto usado para gravar o arquivo
 	*/
-	int i, j, k;
-	i = j = k = 0;
+	int pos_inicial = 0, i = 0, j = 0;
 	tempo_gravacao = SEEK_T_MEDIO;
 
-	while(fat_ent[i].used == TRUE){
-		i++;
-		if(i % 60 == 0){
-			j++;
-			i = j*300;
+	while(fat_ent[pos_inicial].used == TRUE){
+		pos_inicial+=4;
+		if(pos_inicial % 60 == 0){
+			i++;
+			pos_inicial = i*300 + j*60;
 			tempo_gravacao += T_MEDIO_LAT;
 		}
-		if(i % 3000 == 0){
-			k++;
-			i = k*60;
+		if(pos_inicial % 3000 == 0){
+			j++;
+			i = 0;
+			pos_inicial = j*60;
 		}
 	}
 
- 	return i;
-
+ 	return pos_inicial;
 }
 
 
-int sizeOfFile(){
+long int tamanhoDoArquivo(){
 	/*
 	Retorna o tamanho do arquivo em bytes
 	Observação: o 'size' sempre
 	tera alguns bytes a mais devido ao
 	'\n' ao final do arquivo e das linhas.
 	*/
-	int size;
+	long int size;
 
 	fseek(fp, 0, SEEK_END); /* Leva o ponteiro para o final do arquivo */
 	size = ftell(fp); /* Retorna a posição do ponteiro dentro do arquivo */
@@ -229,7 +223,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	if(i <= numb_files){
 		strcpy(file_name_2, fat_list[i].file_name);
 		fp = fopen(file_name_2, "r+");
-		tamanho_do_arquivo = sizeOfFile();
+		tamanho_do_arquivo = tamanhoDoArquivo();
 	}
 
 	/* Se o arquivo existe no Hd Salva no saida.txt */
@@ -245,7 +239,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 				tempo_leitura += T_MEDIO_LAT;
 				t = setor;
 			}
-			oneToThree(setor, cyl_trk_sec);
+			vetorPosicao(setor, cyl_trk_sec);
 			while(j < 512 && l < tamanho_do_arquivo){
 				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]]
 						.track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
@@ -265,14 +259,13 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	/*
 	Funcao para escrita do arquivo no HD
 	*/
+	int pos_inicial, i, setores_escritos = 0, proximo_setor, setor_atual, setor_anterior, trilha_inicial, cyl;
+	int cyl_trk_sec[] = {0, 0, 0};
 	double clusters_necessarios;
 	double tamanho_do_arquivo;
-	int cyl_trk_sec[] = {0, 0, 0};
-	int cyl;
-	int pos_inicial, i, written_sector = 0, j, next_sector, actual_sector;
 
 	fp = fopen(file_name, "r+");
-	tamanho_do_arquivo = sizeOfFile();
+	tamanho_do_arquivo = tamanhoDoArquivo();
 	clusters_necessarios = ceil(tamanho_do_arquivo / (CLUSTER * 512));
 	fclose(fp);
 
@@ -280,66 +273,75 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
 	pressioneEnter();
 
-	pos_inicial = searchFatList(cyl_trk_sec);
-	allocFatList(file_name, pos_inicial);
-	oneToThree(pos_inicial, cyl_trk_sec);
+	pos_inicial = procuraNaFatEnt();
+	alocarAFatList(file_name, pos_inicial);
+	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
 
 	tempo_gravacao = 0;
 
 	cyl = cyl_trk_sec[0];
-	while(written_sector < (clusters_necessarios*4)){
-		/* Conta até o written_sector chegar ao número de setores necessários
+	trilha_inicial = cyl_trk_sec[1];
+	setor_atual = pos_inicial;
+	setor_anterior = pos_inicial;
+
+	while(setores_escritos < (clusters_necessarios*4)){
+		/* Conta até o setores_escritos chegar ao número de setores necessários
 		multiplo de 4 */
 
-		actual_sector = pos_inicial;
 		/* Guarda o setor atual pois pos_incial se altera
 		no decorrer do algoritmo*/
 
 		for(i = 0; i < 512; i++){
 			/* Loop para leitura do arquivo */
-			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]]
-			.sector[cyl_trk_sec[2]].bytes_s[i]);
+			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[i]);
 		}
-		written_sector++;
+		setores_escritos++;
 		/* soma 1 nos setores ja escritos(tanto faz o local) */
 
-		if(written_sector % 4 == 0){
+		if(setores_escritos % 4 == 0){
 			/*
 			Aqui eh checado se o algoritmo escreveu 1 cluster, se sim ele
 			soma 57.(57 = 60 - 4 + 1) Em que somar 60 pula para o cluster
 			de baixo e se reduz 4 para voltar ao inicio do cluster para
 			assim somar 1.
 			*/
-			tempo_gravacao += T_MEDIO_LAT;
-			j = 0;
-			cyl_trk_sec[2] += 57;
-			while(fat_ent[cyl_trk_sec[2]].used != FALSE){
-				/* Checa se o cluster logo abaixo esta vago */
-				j++;
-				cyl_trk_sec[2]++;
-				if(j == 4){
-					/* Caso todo o cluster abaixo esteja ocupado,
-					ele pula para o de baixo */
-					cyl_trk_sec[2] += 57;
-				}
+			if(cyl_trk_sec[1] < 4){
+				cyl_trk_sec[1]++;
+				cyl_trk_sec[2] -= 3;
+				proximo_setor = setor_atual + 57;	
 			}
-			pos_inicial = cyl_trk_sec[2];
-		} else {
+			else if((pos_inicial+4) % 60 == 0 ){
+				cyl_trk_sec[0]++;
+				cyl_trk_sec[1] = trilha_inicial;
+				cyl_trk_sec[2] = 0;
+				pos_inicial += 244;
+				proximo_setor = setor_atual + 1;
+			}
+			else{
+				cyl_trk_sec[1] = trilha_inicial;
+				cyl_trk_sec[2]++;
+				proximo_setor = setor_atual - 239;
+				pos_inicial += 4;
+			}
+		} 
+		else {
 			/* Caso nao tenha escrito um cluster pos_inicial++ normalmente */
-			pos_inicial++;
-			cyl_trk_sec[2] = pos_inicial;
+			proximo_setor = setor_atual + 1;
+			cyl_trk_sec[2]++;
 		}
 
 		if(cyl_trk_sec[0] != cyl){
+			cyl = cyl_trk_sec[0];
 			tempo_gravacao += T_MEDIO_LAT;
 		}
 
-		next_sector = pos_inicial;
-		allocFatEnt(TRUE, FALSE, next_sector, actual_sector);
+		alocaFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
+		setor_anterior = setor_atual;
+		setor_atual = proximo_setor;
 	}
-	fat_ent[actual_sector].eof = TRUE;
+	fat_ent[setor_anterior].eof = TRUE;
 	/* Esta linha atribui eof no ultimo setor escrito.
 	Melhor aqui do que com um if dentro do loop. */
 }
@@ -367,7 +369,7 @@ int main(){
 	int opcao = 0;
 	char nome_arquivo[100];
 	track_array *cylinder = allocCylinder();
-	fat_ent = (fatent*)malloc(30000*sizeof(fatent));
+	fat_ent = (fatent*)malloc(3000*sizeof(fatent));
 	int res;
 	CLEAR
 	do{
@@ -411,5 +413,7 @@ int main(){
 
 	} while(opcao != 5);
 
+	free(cylinder);
+	free(fat_ent);
 	return 0;
 }
