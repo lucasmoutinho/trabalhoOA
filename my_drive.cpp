@@ -2,56 +2,56 @@
 
 using namespace std;
 
-#if defined(_WIN32)
-	#define CLEAR system("cls");
-#else
-	#define CLEAR system("clear");
-#endif
+#if defined(_WIN32)										//
+	#define CLEAR system("cls");				// pede ao preprocessador para
+#else																	// definir uma funcao de limpar a tela
+	#define CLEAR system("clear");			// com base no S.O.
+#endif																//
 
-#define CLUSTER 4
-#define TRILHA_SUPERF  10
-#define SEEK_T_MEDIO 4
-#define SEEK_T_MINIMO 1
-#define T_MEDIO_LAT 6
-#define TEMPO_TRANSF 12
+#define CLUSTER 4											// usada para calcular quantidade de clusters necessarios em escreverArquivo()
+#define TRILHA_SUPERF  10							// usada so aqui mesmo***
+#define SEEK_T_MEDIO 4								// usada para calculos de tempo em setorBruto() e em leituraArquivo()
+#define SEEK_T_MINIMO 1								// usada so aqui mesmo***
+#define T_MEDIO_LAT 6									// usada para calculos de tempo em setorBruto(), leituraArquivo() e escreverArquivo()
+#define TEMPO_TRANSF 12								// usada so aqui mesmo***
 #define TRUE 1
 #define FALSE 0
-#define ESCRITA 1
-#define LEITURA 2
-#define REMOCAO 3
+#define ESCRITA 1											// padroniza escolhas no menu, crucial em verificaArquivo()
+#define LEITURA 2											// padroniza escolhas no menu, crucial em verificaArquivo()
+#define REMOCAO 3											// padroniza escolhas no menu, crucial em verificaArquivo()
 
 
-typedef struct block{
-     unsigned char bytes_s[512];
-} block;
+typedef struct block{									//
+     unsigned char bytes_s[512];			// representa um bloco de memoria
+} block;															//
 
-typedef struct sector_array{
-    block sector[60];
-} sector_array;
+typedef struct sector_array{          //
+    block sector[60];									// representa um dos setores de um HD
+} sector_array;												//
 
-typedef struct track_array{
-    sector_array track[5];
-} track_array;
+typedef struct track_array{						//
+    sector_array track[5];						// representa uma das trilhas/tracks de um HD
+} track_array;												//
 
-typedef struct fatlist_s {
-    char file_name[100];
-    unsigned int first_sector;
-		double tamanho_arquivo;
-} fatlist;
-fatlist *fat_list = NULL;
+typedef struct fatlist_s {						//
+    char file_name[100];							// representa a apresentacao da tabela FAT
+    unsigned int first_sector;				// contem o nome do arquivo a ser inserido/procurado
+		double tamanho_arquivo;						// guarda o primeiro setor deste arquivo
+} fatlist;														// tambem guarda o tamanho do arquivo
+fatlist *fat_list = NULL;							//
 
-typedef struct fatent_s {
-    unsigned int used;
-    unsigned int eof;
-    unsigned int next;
-} fatent;
+typedef struct fatent_s {							//
+    unsigned int used;								// representa uma ferramenta logica da tabela FAT
+    unsigned int eof;									// guarda informacoes sobre cada cluster do HD
+    unsigned int next;								// a respeito de diponibilidade para guardar arquivos
+} fatent;															// e sobre a localizacao de outro pedaco de um arquivo armazenado
 
 
-int numb_files = -1;
-int tempo_gravacao = 0;
-int tempo_leitura = 0;
-fatent *fat_ent;
-FILE *fp;
+int numb_files = -1;									// registra a quantidade de arquivos guardados no HD
+int tempo_gravacao = 0;								// convencionada para ser utilizada em operacoes de tempo de gravacao
+int tempo_leitura = 0;								// convencionada para ser utilizada em operacoes de tempo de leitura
+fatent *fat_ent;											// criacao da referencia para a tabela FAT
+FILE *fp;															// utilizado na entrada e saida de dados no programa
 
 track_array *alocaCilindro(){
 	track_array *array_cilindro = (track_array *)malloc(sizeof(track_array) * 10);
@@ -335,7 +335,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			if(cyl_trk_sec[1] < 4){
 				cyl_trk_sec[1]++;
 				cyl_trk_sec[2] -= 3;
-				proximo_setor = setor_atual + 57;	
+				proximo_setor = setor_atual + 57;
 			}
 			else if((pos_inicial+4) % 60 == 0 ){
 				cyl_trk_sec[0]++;
@@ -350,7 +350,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 				proximo_setor = setor_atual - 239;
 				pos_inicial += 4;
 			}
-		} 
+		}
 		else {
 			proximo_setor = setor_atual + 1;
 			cyl_trk_sec[2]++;
