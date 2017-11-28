@@ -18,6 +18,7 @@ using namespace std;
 #define FALSE 0
 #define ESCRITA 1
 #define LEITURA 2
+#define REMOCAO 3
 
 
 typedef struct block{
@@ -35,6 +36,7 @@ typedef struct track_array{
 typedef struct fatlist_s {
     char file_name[100];
     unsigned int first_sector;
+		double tamanho_arquivo;
 } fatlist;
 fatlist *fat_list = NULL;
 
@@ -51,47 +53,26 @@ int tempo_leitura = 0;
 fatent *fat_ent;
 FILE *fp;
 
-void pressioneEnter(){
-	cout << endl << "Pressione Enter para continuar..." << endl;
-	while(getchar() != '\n');
-	while(getchar() != '\n'); 
+track_array *alocaCilindro(){
+	track_array *array_cilindro = (track_array *)malloc(sizeof(track_array) * 10);
+	return array_cilindro;
 }
 
-void alocarAFatList(char file_name[], int pos_inicial){
-	/*
-		Re-aloca memoria para a estrutura de FatList de acordo com o necessario
-		Param:
-		- file_name[]: nome do arquivo respectivo a fatList
-		- pos_inicial: setor de inicio do arquivo
-	*/
+void alocarAFatList(char file_name[], int pos_inicial, int tamanho_arquivo){
 	fat_list = (fatlist*)realloc(fat_list, (numb_files+1)*sizeof(fatlist));
 
 	strcpy(fat_list[numb_files].file_name, file_name);
 	fat_list[numb_files].first_sector = pos_inicial;
+	fat_list[numb_files].tamanho_arquivo = tamanho_arquivo;
 }
 
 void populaFatEnt(int used ,int eof ,int next, int sector){
-	/*
-		Popula a FatEnt.
-		Param:
-		- used: Se a area esta sendo usada ou nao
-		- eof: fim de arquivo TRUE ou FALSE
-		- next: proximo setor
-		- sector: setor respectivo da fatent
-	*/
 	fat_ent[sector].used = used;
 	fat_ent[sector].eof = eof;
 	fat_ent[sector].next = next;
 }
 
 void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
-	/*
-		Converte o valor de setor bruto para sua posicao
-		cilindro/trilha/setor
-		Param:
-		-setor_bruto: int de setor bruto
-		-cyl_trk_sec: array de inteiros para o cilindro/trilha/setor
-	*/
 	int cilindro, trilha, setor;
 
 	cilindro = setor_bruto/300;
@@ -107,9 +88,6 @@ void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 
 
 int setorBruto(){
-	/*
-		Procura o valor de setor bruto usado para gravar o arquivo
-	*/
 	int pos_inicial = 0, i = 0, j = 0;
 	tempo_gravacao = SEEK_T_MEDIO;
 
@@ -132,34 +110,45 @@ int setorBruto(){
 
 
 long int tamanhoDoArquivo(){
-	/*
-	Retorna o tamanho do arquivo em bytes
-	Observação: o 'size' sempre
-	tera alguns bytes a mais devido ao
-	'\n' ao final do arquivo e das linhas.
-	*/
 	long int size;
 
-	fseek(fp, 0, SEEK_END); /* Leva o ponteiro para o final do arquivo */
-	size = ftell(fp); /* Retorna a posição do ponteiro dentro do arquivo */
+	fseek(fp, 0, SEEK_END);
+	size = ftell(fp);
 	return size;
 }
 
-
-track_array *alocaCilindro(){
-	/*
-		Aloca 10 cilindros porque:
-		Qtd de cilindro = numeros de trila por superfice
-	*/
-
-	track_array *array_cilindro = (track_array*)malloc(sizeof(track_array)*10);
-	return array_cilindro;
+void pressioneEnter(){
+	cout << endl<< "Pressione Enter para continuar..." << endl;
+	while (getchar() != '\n');
+	while (getchar() != '\n');
 }
 
+void mostrarTabelaGorda(){
+	int i = 0, setor, j = 0;
+	cout << "-------------------------------" << endl;
+	while (i <= numb_files){
+		if (strcmp(fat_list[i].file_name, "erased") != 0){
+			cout << " --- Nome do arquivo: " << fat_list[i].file_name << "\t";
+			cout << " --- Tamanho em disco: " << fat_list[i].tamanho_arquivo << " Bytes"<< "\t";
+			setor = fat_list[i].first_sector;
+			cout << "--- Localizacao: ";
+			while (fat_ent[setor].eof != TRUE){
+				cout << setor << " ";
+				setor = fat_ent[setor].next;
+			}
+			cout << endl<< endl;
+		}
+		else{
+			j++;
+		}
+		i++;
+	}
+	cout << "-------------------------------" << endl;
+	cout << "quantidade de arquivos: " << i - j << endl;
+	pressioneEnter();
+}
 
-// Funcao utilizada para verificar se o arquivo a ser aberto existe ou nao.
 int verificaArquivo(char nome_arquivo[], int opcao_menu){
-
   int arquivo_encontrado = 0, i = 0, numb_files = 0;
 	string confirmar;
 	int res = 0;
@@ -175,7 +164,7 @@ int verificaArquivo(char nome_arquivo[], int opcao_menu){
 				arquivo_encontrado = 0;
 			}else{
 				CLEAR
-				cout << endl << "O arquivo pode ser escrito/lido" << endl;
+				cout << endl << "O arquivo pode ser escrito" << endl;
 				cout << endl << "Deseja confirmar esta operacao? (s/n): ";
 				cin >> confirmar;
 				while((confirmar != "n") && (confirmar != "s")) {
@@ -200,7 +189,54 @@ int verificaArquivo(char nome_arquivo[], int opcao_menu){
 			i++;
 		}
 		if(i <= numb_files){
-			res = 1;
+			CLEAR
+			cout << endl<< "O arquivo pode ser lido do HD virtual" << endl;
+			cout << endl<< "Deseja confirmar esta operacao? (s/n): ";
+			cin >> confirmar;
+			while ((confirmar != "n") && (confirmar != "s")){
+				cout << "Opcao invalida, tente novamente: ";
+				cin >> confirmar;
+			}
+			if (confirmar == "s"){
+				CLEAR
+				res = 1;
+			}
+			else if (confirmar == "n"){
+				CLEAR
+				res = 0;
+				cout << "Retornando ao menu..." << endl<< endl;
+			}
+		}
+		else{
+			res = 0;
+			cout << endl;
+			cout << "----------------------------------" << endl;
+			cout << "O arquivo nao esta presente no HD virtual" << endl;
+			cout << "----------------------------------" << endl;
+		}
+	}
+	else if(opcao_menu == REMOCAO){
+		while (strcmp(fat_list[i].file_name, nome_arquivo) != 0 && (i <= numb_files)){
+			i++;
+		}
+		if (i <= numb_files){
+			CLEAR
+			cout << endl<< "O arquivo pode ser removido do HD virtual" << endl;
+			cout << endl<< "Deseja confirmar esta operacao? (s/n): ";
+			cin >> confirmar;
+			while ((confirmar != "n") && (confirmar != "s")){
+				cout << "Opcao invalida, tente novamente: ";
+				cin >> confirmar;
+			}
+			if (confirmar == "s"){
+				CLEAR
+				res = 1;
+			}
+			else if (confirmar == "n"){
+				CLEAR
+				res = 0;
+				cout << "Retornando ao menu..." << endl<< endl;
+			}
 		}
 		else{
 			res = 0;
@@ -213,26 +249,35 @@ int verificaArquivo(char nome_arquivo[], int opcao_menu){
 	return res;
 }
 
+void apagarArquivo(char file_name[]){
+	int i = 0, setor;
+
+	while (strcmp(fat_list[i].file_name, file_name) != 0){
+		i++;
+	}
+	setor = fat_list[i].first_sector;
+	strcpy(fat_list[i].file_name, "erased");
+	while (fat_ent[setor].eof != TRUE){
+		fat_ent[setor].used = FALSE;
+		setor = fat_ent[setor].next;
+	}
+	fat_ent[setor].used = FALSE;
+	fat_ent[setor].eof = FALSE;
+}
+
 void leituraArquivo(char file_name[], track_array *cylinder) {
-	/*
-		Funcao para Leitura do arquivo
-	*/
-	int i = 0, setor, j = 0, tamanho_do_arquivo, bytes_lidos = 0, t;
-	char nome_arquivo[100];
+	int i = 0, setor, j = 0, bytes_lidos = 0, t;
 	int cyl_trk_sec[] = {0, 0, 0};
+	double tamanho_do_arquivo;
 
 	tempo_leitura = SEEK_T_MEDIO;
 
-	/* Enquanto nao acha o nome no arquvio na tabela fat ...*/
 	while(strcmp(fat_list[i].file_name, file_name) != 0){
 		i++;
 	}
 	setor = fat_list[i].first_sector;
 
-	strcpy(nome_arquivo, fat_list[i].file_name);
-	fp = fopen(nome_arquivo, "r+");
-	tamanho_do_arquivo = tamanhoDoArquivo();
-	fclose(fp);
+	tamanho_do_arquivo = fat_list[i].tamanho_arquivo;
 
 	fp = fopen("saida.txt", "w+");
 	t = setor;
@@ -255,9 +300,6 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 }
 
 void escreverArquivo(char file_name[], track_array *cylinder){
-	/*
-	Funcao para escrita do arquivo no HD
-	*/
 	int pos_inicial, i, setores_escritos = 0, proximo_setor, setor_atual, setor_anterior, trilha_inicial, cyl;
 	int cyl_trk_sec[] = {0, 0, 0};
 	double clusters_necessarios;
@@ -273,7 +315,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	pressioneEnter();
 
 	pos_inicial = setorBruto();
-	alocarAFatList(file_name, pos_inicial);
+	alocarAFatList(file_name, pos_inicial, tamanho_do_arquivo);
 	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
@@ -284,26 +326,12 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	setor_anterior = pos_inicial;
 
 	while(setores_escritos < (clusters_necessarios*4)){
-		/* Conta até o setores_escritos chegar ao número de setores necessários
-		multiplo de 4 */
-
-		/* Guarda o setor atual pois pos_incial se altera
-		no decorrer do algoritmo*/
-
 		for(i = 0; i < 512; i++){
-			/* Loop para leitura do arquivo */
 			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[i]);
 		}
 		setores_escritos++;
-		/* soma 1 nos setores ja escritos(tanto faz o local) */
 
 		if(setores_escritos % 4 == 0){
-			/*
-			Aqui eh checado se o algoritmo escreveu 1 cluster, se sim ele
-			soma 57.(57 = 60 - 4 + 1) Em que somar 60 pula para o cluster
-			de baixo e se reduz 4 para voltar ao inicio do cluster para
-			assim somar 1.
-			*/
 			if(cyl_trk_sec[1] < 4){
 				cyl_trk_sec[1]++;
 				cyl_trk_sec[2] -= 3;
@@ -324,7 +352,6 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			}
 		} 
 		else {
-			/* Caso nao tenha escrito um cluster pos_inicial++ normalmente */
 			proximo_setor = setor_atual + 1;
 			cyl_trk_sec[2]++;
 		}
@@ -339,8 +366,6 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 		setor_atual = proximo_setor;
 	}
 	fat_ent[setor_anterior].eof = TRUE;
-	/* Esta linha atribui eof no ultimo setor escrito.
-	Melhor aqui do que com um if dentro do loop. */
 	fclose(fp);
 }
 
@@ -398,10 +423,15 @@ int main(){
 				}
 				break;
 			case 3:
-
+				CLEAR
+				res = verificaArquivo(nome_arquivo, REMOCAO);
+				if(res == 1){
+					apagarArquivo(nome_arquivo);
+				}
 				break;
 			case 4:
-
+				CLEAR
+				mostrarTabelaGorda();
 				break;
 			case 5:
 				cout << "Saindo" << endl << endl;
