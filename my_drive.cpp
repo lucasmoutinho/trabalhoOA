@@ -82,30 +82,25 @@ void allocFatEnt(int used ,int eof ,int next, int sector){
 	fat_ent[sector].next = next;
 }
 
-void oneToThree(int index, int cyl_trk_sec[]){
+void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 	/*
 		Converte o valor de setor bruto para sua posicao
 		cilindro/trilha/setor
 		Param:
-		-index: int de setor bruto
+		-setor_bruto: int de setor bruto
 		-cyl_trk_sec: array de inteiros para o cilindro/trilha/setor
 	*/
-	int t;
-	int s;
-    int c = index/300;
+	int cilindro, trilha, setor;
 
-    index -= 300*c;
-    if((index/60) >= 5){
-        t = ((index/60)/5)-1;
-    }else{
-        t = (index/60);
-    }
-    s = index%60;
+	cilindro = setor_bruto/300;
+	setor_bruto = setor_bruto%300;
+	trilha = setor_bruto/60;
+	setor = setor_bruto%60;
 
 
-    cyl_trk_sec[0] = c;
-    cyl_trk_sec[1] = t;
-    cyl_trk_sec[2] = s;
+	cyl_trk_sec[0] = cilindro;
+	cyl_trk_sec[1] = trilha;
+	cyl_trk_sec[2] = setor;
 }
 
 
@@ -244,7 +239,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 				tempo_leitura += T_MEDIO_LAT;
 				t = setor;
 			}
-			oneToThree(setor, cyl_trk_sec);
+			vetorPosicao(setor, cyl_trk_sec);
 			while(j < 512 && l < tamanho_do_arquivo){
 				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]]
 						.track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
@@ -281,7 +276,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 
 	pos_inicial = procuraNaFatEnt();
 	alocarAFatList(file_name, pos_inicial);
-	oneToThree(pos_inicial, cyl_trk_sec);
+	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
 
@@ -318,7 +313,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			else if((pos_inicial+4) % 60 == 0 ){
 				cyl_trk_sec[0]++;
 				cyl_trk_sec[1] = trilha_inicial;
-				cyl_trk_sec[2] = 
+				cyl_trk_sec[2] = 0;
 			}
 			else{
 				cyl_trk_sec[1]++;
