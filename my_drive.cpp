@@ -1,3 +1,11 @@
+// Trabalho de OA - simulacao de um HD
+
+// INTEGRANTES:
+// - Lucas da Silva Moutinho        : 15/0015747
+// - Tiago Rodrigues da Cunha Cabral: 15/0150296
+// - Pedro Henrique Rodrigues Gomes : 15/0144482
+
+
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -417,6 +425,9 @@ int main(){
 	fat_ent = (fatent*)malloc(3000*sizeof(fatent));
 	int res;
 	CLEAR
+	cout << "BEM VINDO AO SISTEMA DE SIMULACAO DE UM DISCO MAGNETICO RIGIDO" << endl;
+	cout << "ESCOLHA UMA DAS OPCOES ABAIXO" << endl << endl;
+
 	do{
 		opcao = menu();
 		tempo_gravacao = 0;
