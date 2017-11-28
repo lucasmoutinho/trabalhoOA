@@ -68,7 +68,7 @@ void alocarAFatList(char file_name[], int pos_inicial){
 	fat_list[numb_files].first_sector = pos_inicial;
 }
 
-void alocaFatEnt(int used ,int eof ,int next, int sector){
+void populaFatEnt(int used ,int eof ,int next, int sector){
 	/*
 		Popula a FatEnt.
 		Param:
@@ -104,7 +104,7 @@ void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 }
 
 
-int procuraNaFatEnt(){
+int setorBruto(){
 	/*
 		Procura o valor de setor bruto usado para gravar o arquivo
 	*/
@@ -144,16 +144,14 @@ long int tamanhoDoArquivo(){
 }
 
 
-track_array *allocCylinder(){
+track_array *alocaCilindro(){
 	/*
 		Aloca 10 cilindros porque:
 		Qtd de cilindro = numeros de trila por superfice
 	*/
 
-	track_array *new_track_array =
-		(track_array*)malloc(sizeof(track_array)*10);
-
-	return new_track_array;
+	track_array *array_cilindro = (track_array*)malloc(sizeof(track_array)*10);
+	return array_cilindro;
 }
 
 
@@ -200,8 +198,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	/*
 		Funcao para Leitura do arquivo
 	*/
-	int i = 0, setor, j = 0, numb_sectors = 1, read_sector = 0, tamanho_do_arquivo, l = 0;
-	int t;
+	int i = 0, setor, j = 0, numb_sectors = 1, read_sector = 0, tamanho_do_arquivo, l = 0, t;
 	char file_name_2[100];
 	int cyl_trk_sec[] = {0, 0, 0};
 
@@ -241,8 +238,7 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 			}
 			vetorPosicao(setor, cyl_trk_sec);
 			while(j < 512 && l < tamanho_do_arquivo){
-				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]]
-						.track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
+				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
 				j++;
 				l++;
 			}
@@ -273,14 +269,12 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
 	pressioneEnter();
 
-	pos_inicial = procuraNaFatEnt();
+	pos_inicial = setorBruto();
 	alocarAFatList(file_name, pos_inicial);
 	vetorPosicao(pos_inicial, cyl_trk_sec);
 
 	fp = fopen(file_name, "r+");
-
 	tempo_gravacao = 0;
-
 	cyl = cyl_trk_sec[0];
 	trilha_inicial = cyl_trk_sec[1];
 	setor_atual = pos_inicial;
@@ -337,13 +331,14 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			tempo_gravacao += T_MEDIO_LAT;
 		}
 
-		alocaFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
+		populaFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
 		setor_anterior = setor_atual;
 		setor_atual = proximo_setor;
 	}
 	fat_ent[setor_anterior].eof = TRUE;
 	/* Esta linha atribui eof no ultimo setor escrito.
 	Melhor aqui do que com um if dentro do loop. */
+	fclose(fp);
 }
 
 int menu(){
@@ -368,7 +363,7 @@ int main(){
 
 	int opcao = 0;
 	char nome_arquivo[100];
-	track_array *cylinder = allocCylinder();
+	track_array *cylinder = alocaCilindro();
 	fat_ent = (fatent*)malloc(3000*sizeof(fatent));
 	int res;
 	CLEAR
