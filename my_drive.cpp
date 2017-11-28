@@ -109,7 +109,7 @@ void oneToThree(int index, int cyl_trk_sec[]){
 }
 
 
-int searchFatList(int cyl_trk_sec[]){
+int searchFatList(){
 	/*
 		Procura o valor de setor bruto usado para gravar o arquivo
 	*/
@@ -280,7 +280,7 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	cout << "O arquivo necessitará de " << clusters_necessarios << " cluster(s)" << endl;
 	pressioneEnter();
 
-	pos_inicial = searchFatList(cyl_trk_sec);
+	pos_inicial = searchFatList();
 	allocFatList(file_name, pos_inicial);
 	oneToThree(pos_inicial, cyl_trk_sec);
 
@@ -344,6 +344,25 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	Melhor aqui do que com um if dentro do loop. */
 }
 
+
+void mostrarTabelaGorda() {
+
+	int i = 0;
+	cout << "-------------------------------" << endl;
+
+	while( i < numb_files+1 ){
+		cout << " --- nome do arquivo: " << fat_list[i].file_name << "\t";
+		cout << "--- local da memoria: " << fat_list[i].first_sector << endl;
+		
+		i+=1;
+	}
+	cout << "quantidade de arquivos: " << i << endl;
+	pressioneEnter();
+
+	cout << "-------------------------------" << endl;
+}
+
+
 int menu(){
 	int opcao;
 
@@ -398,6 +417,7 @@ int main(){
 
 				break;
 			case 4:
+				mostrarTabelaGorda();
 
 				break;
 			case 5:
