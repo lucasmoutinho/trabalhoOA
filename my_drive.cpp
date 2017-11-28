@@ -83,7 +83,7 @@ void populaFatEnt(int used, int eof, int next, int sector){
 }
 
 //Utiliza do valor de setor bruto para calcular a posicao relativa ao cilindro, trilha e setor
-void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
+void vetorPosicao(int setor_bruto, int cil_trl_sec[]){
 	int cilindro, trilha, setor;
 
 	cilindro = setor_bruto / 300;
@@ -91,9 +91,9 @@ void vetorPosicao(int setor_bruto, int cyl_trk_sec[]){
 	trilha = setor_bruto / 60;
 	setor = setor_bruto % 60;
 
-	cyl_trk_sec[0] = cilindro;
-	cyl_trk_sec[1] = trilha;
-	cyl_trk_sec[2] = setor;
+	cil_trl_sec[0] = cilindro;
+	cil_trl_sec[1] = trilha;
+	cil_trl_sec[2] = setor;
 }
 
 //Retorna o setor bruto inicial disponivel para iniciar a escrita
@@ -287,7 +287,7 @@ void apagarArquivo(char file_name[]){
 // Le o arquivo do disco e escreve no arquivo saida.txt
 void leituraArquivo(char file_name[], track_array *cylinder){
 	int i = 0, setor, j = 0, bytes_lidos = 0, t;
-	int cyl_trk_sec[] = {0, 0, 0};
+	int cil_trl_sec[] = {0, 0, 0};
 	double tamanho_do_arquivo;
 
 	tempo_leitura += SEEK_T_MEDIO;
@@ -306,9 +306,9 @@ void leituraArquivo(char file_name[], track_array *cylinder){
 			tempo_leitura += T_MEDIO_LAT;
 			t = setor;
 		}
-		vetorPosicao(setor, cyl_trk_sec);
+		vetorPosicao(setor, cil_trl_sec);
 		while (j < 512 && bytes_lidos < tamanho_do_arquivo){
-			fprintf(fp, "%c", cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
+			fprintf(fp, "%c", cylinder[cil_trl_sec[0]].track[cil_trl_sec[1]].sector[cil_trl_sec[2]].bytes_s[j]);
 			bytes_lidos++;
 			j++;
 		}
@@ -322,7 +322,7 @@ void leituraArquivo(char file_name[], track_array *cylinder){
 //Le o arquivo no diretorio recorrente e salva os caracteres em setores do disco
 void escreverArquivo(char file_name[], track_array *cylinder){
 	int pos_inicial, i, setores_escritos = 0, proximo_setor, setor_atual, setor_anterior, trilha_inicial, cyl;
-	int cyl_trk_sec[] = {0, 0, 0};
+	int cil_trl_sec[] = {0, 0, 0};
 	double clusters_necessarios;
 	double tamanho_do_arquivo;
 
@@ -337,55 +337,55 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 
 	pos_inicial = setorBruto();
 	alocarAFatList(file_name, pos_inicial, tamanho_do_arquivo);
-	vetorPosicao(pos_inicial, cyl_trk_sec);
+	vetorPosicao(pos_inicial, cil_trl_sec);
 
 	fp = fopen(file_name, "r+");
-	cyl = cyl_trk_sec[0];
-	trilha_inicial = cyl_trk_sec[1];
+	cyl = cil_trl_sec[0];
+	trilha_inicial = cil_trl_sec[1];
 	setor_atual = pos_inicial;
 	setor_anterior = pos_inicial;
 
 	while (setores_escritos < (clusters_necessarios * 4)){
 		for (i = 0; i < 512; i++){
-			fscanf(fp, "%c", &cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[i]);
+			fscanf(fp, "%c", &cylinder[cil_trl_sec[0]].track[cil_trl_sec[1]].sector[cil_trl_sec[2]].bytes_s[i]);
 		}
 		setores_escritos++;
 
 		if (setores_escritos % 4 == 0){
-			if (cyl_trk_sec[1] < 4){
-				cyl_trk_sec[1]++;
-				cyl_trk_sec[2] -= 3;
+			if (cil_trl_sec[1] < 4){
+				cil_trl_sec[1]++;
+				cil_trl_sec[2] -= 3;
 				proximo_setor = setor_atual + 57;
 			}
 			else if ((pos_inicial + 4) % 60 == 0){
-				cyl_trk_sec[0]++;
-				cyl_trk_sec[1] = trilha_inicial;
-				cyl_trk_sec[2] = 0;
+				cil_trl_sec[0]++;
+				cil_trl_sec[1] = trilha_inicial;
+				cil_trl_sec[2] = 0;
 				pos_inicial += 244;
 				proximo_setor = setor_atual + 1;
 			}
 			else{
-				cyl_trk_sec[1] = trilha_inicial;
-				cyl_trk_sec[2]++;
+				cil_trl_sec[1] = trilha_inicial;
+				cil_trl_sec[2]++;
 				proximo_setor = setor_atual - 239;
 				pos_inicial += 4;
 			}
 
 			if (fat_ent[proximo_setor].used == TRUE){
 				proximo_setor = setorBruto();
-				vetorPosicao(proximo_setor, cyl_trk_sec);
+				vetorPosicao(proximo_setor, cil_trl_sec);
 				pos_inicial = proximo_setor;
-				cyl = cyl_trk_sec[0];
-				trilha_inicial = cyl_trk_sec[1];
+				cyl = cil_trl_sec[0];
+				trilha_inicial = cil_trl_sec[1];
 			}
 		}
 		else{
 			proximo_setor = setor_atual + 1;
-			cyl_trk_sec[2]++;
+			cil_trl_sec[2]++;
 		}
 
-		if (cyl_trk_sec[0] != cyl){
-			cyl = cyl_trk_sec[0];
+		if (cil_trl_sec[0] != cyl){
+			cyl = cil_trl_sec[0];
 			tempo_gravacao += T_MEDIO_LAT;
 		}
 
