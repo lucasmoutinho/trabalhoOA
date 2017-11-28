@@ -16,6 +16,8 @@ using namespace std;
 #define TEMPO_TRANSF 12
 #define TRUE 1
 #define FALSE 0
+#define ESCRITA 1
+#define LEITURA 2
 
 
 typedef struct block{
@@ -51,7 +53,7 @@ FILE *fp;
 
 void pressioneEnter(){
 	cout << endl << "Pressione Enter para continuar..." << endl;
-	while (getchar() != '\n');
+	while(getchar() != '\n');
 	while(getchar() != '\n'); 
 }
 
@@ -156,41 +158,58 @@ track_array *alocaCilindro(){
 
 
 // Funcao utilizada para verificar se o arquivo a ser aberto existe ou nao.
-int verificaArquivo(char nome_arquivo[]){
+int verificaArquivo(char nome_arquivo[], int opcao_menu){
 
-  int arquivo_encontrado = 0;
+  int arquivo_encontrado = 0, i = 0, numb_files = 0;
 	string confirmar;
-	int res;
+	int res = 0;
 
   cout << endl << "Informe o nome do arquivo" << endl;
   cin >> nome_arquivo;
-  while(arquivo_encontrado == 0) {
-    if(fopen(nome_arquivo, "r+") == NULL){
-      cout << endl << "Arquivo nao encontrado" << endl;
-      cout << "Informe outro nome de arquivo:  ";
-      cin >> nome_arquivo;
-      arquivo_encontrado = 0;
-    }else{
-      CLEAR
-      cout << endl << "O arquivo pode ser escrito/lido" << endl;
-			cout << endl << "Deseja confirmar esta operacao? (s/n): ";
-			cin >> confirmar;
-			while((confirmar != "n") && (confirmar != "s")) {
-				cout << "Opcao invalida, tente novamente: ";
+	if(opcao_menu == ESCRITA){
+		while(arquivo_encontrado == 0) {
+			if(fopen(nome_arquivo, "r+") == NULL){
+				cout << endl << "Arquivo nao encontrado" << endl;
+				cout << "Informe outro nome de arquivo:  ";
+				cin >> nome_arquivo;
+				arquivo_encontrado = 0;
+			}else{
+				CLEAR
+				cout << endl << "O arquivo pode ser escrito/lido" << endl;
+				cout << endl << "Deseja confirmar esta operacao? (s/n): ";
 				cin >> confirmar;
+				while((confirmar != "n") && (confirmar != "s")) {
+					cout << "Opcao invalida, tente novamente: ";
+					cin >> confirmar;
+				}
+				if (confirmar == "s") {
+					CLEAR
+					arquivo_encontrado = 1;
+					res = 1;
+				}else if (confirmar == "n") {
+					CLEAR
+					arquivo_encontrado = 1;
+					res = 0;
+					cout << "Retornando ao menu..." << endl << endl;
+				}
 			}
-			if (confirmar == "s") {
-				CLEAR
-				arquivo_encontrado = 1;
-				res = 1;
-			}else if (confirmar == "n") {
-				CLEAR
-				arquivo_encontrado = 1;
-				res = 0;
-				cout << "Retornando ao menu..." << endl << endl;
-			}
-    }
-  }
+		}
+	}
+	else if(opcao_menu == LEITURA){
+		while (strcmp(fat_list[i].file_name, nome_arquivo) != 0 && (i <= numb_files)){
+			i++;
+		}
+		if(i <= numb_files){
+			res = 1;
+		}
+		else{
+			res = 0;
+			cout << endl;
+			cout << "----------------------------------" << endl;
+			cout << "O arquivo nao esta presente no HD virtual" << endl;
+			cout << "----------------------------------" << endl;
+		}
+	}
 	return res;
 }
 
@@ -198,57 +217,41 @@ void leituraArquivo(char file_name[], track_array *cylinder) {
 	/*
 		Funcao para Leitura do arquivo
 	*/
-	int i = 0, setor, j = 0, numb_sectors = 1, read_sector = 0, tamanho_do_arquivo, l = 0, t;
-	char file_name_2[100];
+	int i = 0, setor, j = 0, tamanho_do_arquivo, bytes_lidos = 0, t;
+	char nome_arquivo[100];
 	int cyl_trk_sec[] = {0, 0, 0};
 
 	tempo_leitura = SEEK_T_MEDIO;
 
 	/* Enquanto nao acha o nome no arquvio na tabela fat ...*/
-	while(strcmp(fat_list[i].file_name, file_name) != 0 && (i <= numb_files)){
+	while(strcmp(fat_list[i].file_name, file_name) != 0){
 		i++;
 	}
 	setor = fat_list[i].first_sector;
 
-	/* Conta a quantidade de setores*/
-	while(fat_ent[setor].eof == FALSE){
-		numb_sectors++;
+	strcpy(nome_arquivo, fat_list[i].file_name);
+	fp = fopen(nome_arquivo, "r+");
+	tamanho_do_arquivo = tamanhoDoArquivo();
+	fclose(fp);
+
+	fp = fopen("saida.txt", "w+");
+	t = setor;
+	while (bytes_lidos < tamanho_do_arquivo){
+		if (t + 4 < setor){
+			tempo_leitura += T_MEDIO_LAT;
+			t = setor;
+		}
+		vetorPosicao(setor, cyl_trk_sec);
+		while (j < 512 && bytes_lidos < tamanho_do_arquivo){
+			fprintf(fp, "%c", cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
+			bytes_lidos++;
+			j++;
+		}
+
+		j = 0;
 		setor = fat_ent[setor].next;
 	}
-
-
-	if(i <= numb_files){
-		strcpy(file_name_2, fat_list[i].file_name);
-		fp = fopen(file_name_2, "r+");
-		tamanho_do_arquivo = tamanhoDoArquivo();
-	}
-
-	/* Se o arquivo existe no Hd Salva no saida.txt */
-	if(strcmp(fat_list[i].file_name, file_name) != 0){
-		cout << "O arquivo nao esta presente o HD virtual" << endl;
-	} else {
-		fp = fopen("saida.txt", "w+");
-		setor = fat_list[i].first_sector;
-		t = setor;
-
-		while(l < tamanho_do_arquivo){
-			if(t+4 < setor){
-				tempo_leitura += T_MEDIO_LAT;
-				t = setor;
-			}
-			vetorPosicao(setor, cyl_trk_sec);
-			while(j < 512 && l < tamanho_do_arquivo){
-				fprintf(fp, "%c", cylinder[cyl_trk_sec[0]].track[cyl_trk_sec[1]].sector[cyl_trk_sec[2]].bytes_s[j]);
-				j++;
-				l++;
-			}
-
-			j = 0;
-			setor = fat_ent[setor].next;
-			read_sector++;
-		}
-		fclose(fp);
-	}
+	fclose(fp);
 }
 
 void escreverArquivo(char file_name[], track_array *cylinder){
@@ -374,7 +377,7 @@ int main(){
 		switch(opcao){
 			case 1:
 				CLEAR
-				res = verificaArquivo(nome_arquivo);
+				res = verificaArquivo(nome_arquivo, ESCRITA);
 				if (res == 1) {
 					numb_files++;
 					escreverArquivo(nome_arquivo, cylinder);
@@ -387,9 +390,12 @@ int main(){
 				CLEAR
 				cout << "Leitura de arquivo do HD virtual" << endl;
 				cout << "Irá gerar um arquivo saida.txt" << endl;
-				res = verificaArquivo(nome_arquivo);
-				leituraArquivo(nome_arquivo, cylinder);
-				cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
+				res = verificaArquivo(nome_arquivo, LEITURA);
+				if(res == 1){
+					cout << endl << "Lido com sucesso do HD!" << endl;
+					leituraArquivo(nome_arquivo, cylinder);
+					cout << "Tempo total utilizado na leitura " << tempo_leitura << "(ms)" << endl;
+				}
 				break;
 			case 3:
 
