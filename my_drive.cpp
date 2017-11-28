@@ -68,7 +68,7 @@ void alocarAFatList(char file_name[], int pos_inicial){
 	fat_list[numb_files].first_sector = pos_inicial;
 }
 
-void allocFatEnt(int used ,int eof ,int next, int sector){
+void alocaFatEnt(int used ,int eof ,int next, int sector){
 	/*
 		Popula a FatEnt.
 		Param:
@@ -259,11 +259,10 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	/*
 	Funcao para escrita do arquivo no HD
 	*/
+	int pos_inicial, i, setores_escritos = 0, proximo_setor, setor_atual, setor_anterior, trilha_inicial, cyl;
+	int cyl_trk_sec[] = {0, 0, 0};
 	double clusters_necessarios;
 	double tamanho_do_arquivo;
-	int cyl_trk_sec[] = {0, 0, 0};
-	int cyl;
-	int pos_inicial, i, setores_escritos = 0, j, proximo_setor, setor_atual, trilha_inicial;
 
 	fp = fopen(file_name, "r+");
 	tamanho_do_arquivo = tamanhoDoArquivo();
@@ -285,6 +284,8 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 	cyl = cyl_trk_sec[0];
 	trilha_inicial = cyl_trk_sec[1];
 	setor_atual = pos_inicial;
+	setor_anterior = pos_inicial;
+
 	while(setores_escritos < (clusters_necessarios*4)){
 		/* Conta até o setores_escritos chegar ao número de setores necessários
 		multiplo de 4 */
@@ -307,22 +308,28 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			assim somar 1.
 			*/
 			if(cyl_trk_sec[1] < 4){
-				cyl_trk_sec[2] += 57;
-				proximo_setor = cyl_trk_sec[2];	
+				cyl_trk_sec[1]++;
+				cyl_trk_sec[2] -= 3;
+				proximo_setor = setor_atual + 57;	
 			}
 			else if((pos_inicial+4) % 60 == 0 ){
 				cyl_trk_sec[0]++;
 				cyl_trk_sec[1] = trilha_inicial;
 				cyl_trk_sec[2] = 0;
+				pos_inicial += 244;
+				proximo_setor = setor_atual + 1;
 			}
 			else{
-				cyl_trk_sec[1]++;
-				cyl_trk_sec[2] += 57;
+				cyl_trk_sec[1] = trilha_inicial;
+				cyl_trk_sec[2]++;
+				proximo_setor = setor_atual - 239;
+				pos_inicial += 4;
 			}
-		} else {
+		} 
+		else {
 			/* Caso nao tenha escrito um cluster pos_inicial++ normalmente */
 			proximo_setor = setor_atual + 1;
-			cyl_trk_sec[2] = proximo_setor;
+			cyl_trk_sec[2]++;
 		}
 
 		if(cyl_trk_sec[0] != cyl){
@@ -330,10 +337,11 @@ void escreverArquivo(char file_name[], track_array *cylinder){
 			tempo_gravacao += T_MEDIO_LAT;
 		}
 
-		allocFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
+		alocaFatEnt(TRUE, FALSE, proximo_setor, setor_atual);
+		setor_anterior = setor_atual;
 		setor_atual = proximo_setor;
 	}
-	fat_ent[setor_atual].eof = TRUE;
+	fat_ent[setor_anterior].eof = TRUE;
 	/* Esta linha atribui eof no ultimo setor escrito.
 	Melhor aqui do que com um if dentro do loop. */
 }
@@ -405,5 +413,7 @@ int main(){
 
 	} while(opcao != 5);
 
+	free(cylinder);
+	free(fat_ent);
 	return 0;
 }
